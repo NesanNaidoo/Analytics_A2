@@ -4,3 +4,58 @@ author: "Nesan Naidoo, Dominique Chetty"
 date: "`r Sys.Date()`"
 output: html_document
 ---
+
+```{r}
+dat =read.table("Collider_Data_2025.txt", h = TRUE,stringsAsFactors =TRUE)
+# dim(dat)
+# head(dat) # First five observationsare all of class 1
+
+```
+
+## Q1. a)
+```{r,fig.cap="Scatter Plot of coordinates by Particle Type",fig.align='center'}
+library(ggplot2)
+
+# Create column for particle type based on Y1, Y2, Y3
+dat$Particle <- ifelse(dat$Y1 == 1, "alpha", ifelse(dat$Y2 == 1, "beta", "rho"))
+
+# Create the scatter plot
+ggplot(data = dat, aes(x = X1, y = X2, color = Particle)) +
+  geom_point(shape = 16, size = 3) +
+  scale_color_manual(values = c("alpha" = "red", "beta" = "lightblue", "rho" = "green"),labels = c("alpha", "beta", "rho")) +  
+  labs(x = "X1", y = "X2", title = "") +  
+  theme_minimal() +  
+  theme(legend.position = "right",axis.line = element_line(color = "black", linewidth = 1))  
+```
+The rho particles(green) form a circular region.The alpha particles(red) form a concave shape around the rho and beta particles.The beta particles(blue) also form a concave shape around the rho and alpha particles.There are signs of overlap with all three particles
+
+A neural network is an appropriate model class for this problem as the particles above are not linearly separable and neural networks are good at learning non-linear decision boundaries and capturing complex patterns in the data 
+
+## Q1. b)
+```{r}
+
+soft_max <- function(Z) {
+  exp_Z <- exp(Z)
+  denom <- colSums(exp_Z)
+  probs <- exp_Z / matrix(denom, nrow = nrow(Z), ncol = ncol(Z), byrow = TRUE)
+  return(probs)
+}
+
+```
+
+## Q1 c)
+```{r}
+cross_ent <- function(y, y_hat) {
+  if (y[1] == 1) {
+    return(-log(y_hat[1]))
+  } else if (y[2] == 1) {
+    return(-log(y_hat[2]))
+  } else if (y[3] == 1) {
+    return(-log(y_hat[3]))
+  }
+}
+
+```
+
+It is computationally more efficient to evaluate only the
+terms corresponding to $y_{i.}=1$ as computing terms where $y_{i.}=0$ is computationally a waste of time and resources.
