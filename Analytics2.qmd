@@ -1,0 +1,369 @@
+---
+title: "Analytics2"
+author: "Sayuri Reddy RDDSAY003"
+---
+
+## Collier Data
+
+Tasked to classify rarely observed sub-atomic particles as they scatter after impact.
+
+| Variable | Description                                |
+|----------|--------------------------------------------|
+| X1       | First co-ordinate in cross section         |
+| X2       | Second co-ordinate in cross section        |
+| X3       | Detector type, 1-Type A, 0 - Type B        |
+| Y1       | Response, 1 - code $\alpha$, 0 - otherwise |
+| Y2       | Response, 1 - code $\beta$, 0 - otherwise  |
+| Y3       | Response, 1 - code $\rho$, 0 - otherwise   |
+
+```{r}
+# loading data
+library(ggplot2)
+library(tidyr)
+dat = read.table('Collider_Data_2025.txt', h = TRUE, stringsAsFactors = TRUE)
+dim(dat)
+head(dat)
+```
+
+Auto-Feature-Network: this is the neural network we are using, automatically augments the feature space with transformed inputs. One augmented input node is added for each feature.
+
+# Problem Set
+
+## a) Render Code + Plot
+
+```{r}
+dat$class <- factor(
+  apply(dat[, c("Y1", "Y2", "Y3")], 1, function(v) which(v == 1)),
+  labels = c("alpha", "beta", "rho")
+)
+
+ggplot(dat, aes(x = X1, y = X2, colour = class)) +
+  geom_point(size = 2) +
+  theme_minimal() +
+  labs(
+    title    = "Collider Data: X1 vs X2 by Particle Class",
+    x        = expression(X[1]),
+    y        = expression(X[2]),
+    colour   = "Particle\nType"
+  )
+
+```
+
+Comment:
+
+From Figure 1 above we observe that none of the 3 particle types can be separated distinctly by a straight line. The 3 regions overlap each other and create curved clusters. This would make it difficult for a linear model to distinguish the 3 region hence why a non-linear machinery such a neural network is more appropriate to capture the class sregions in the Collider data.
+
+## b) Render Code
+
+```{r}
+softmax_rep <- function(Z) {
+  K <- nrow(Z)
+  N <- ncol(Z)
+
+  # column Max
+  maxes    <- apply(Z, 2, max)  
+  
+  #Center
+  Z_center <- Z - matrix(maxes, nrow = K, ncol = N, byrow = TRUE)
+  
+  # 2. exponentiate
+  expZ     <- exp(Z_center)
+  
+  # 3. get column sums and normalize
+  sums     <- colSums(expZ)                                  # length N
+  expZ / matrix(sums, nrow = K, ncol = N, byrow = TRUE)
+}
+```
+
+## c) Render typed response
+
+``` r
+C_i <- function(y_ij, yhat_ij) {
+  # y_ij: length‑3 one‑hot vector 
+  #yhat_ij: length‑3 predicted probs
+  if (identical(y_ij, c(1,0,0))) {
+    -log(yhat_ij[1])
+  } else if (identical(y_ij, c(0,1,0))) {
+    -log(yhat_ij[2])
+  } else if (identical(y_ij, c(0,0,1))) {
+    -log(yhat_ij[3])
+  } else {
+    stop("y_ij must be one‑hot")
+  }
+}
+```
+
+By computing only $−log⁡(\hat{y^i},j^*)$  for the true class $j^*$, we never evaluate $0×log⁡(0)$ (which yields NaN in floating‑point) therefore saving two extra $log()$ calls per example.
+
+## d) Render code
+
+```{r}
+g <- function(Yhat, Y) {
+  # Yhat: K × N matrix of predicted probabilities (rows = classes, cols = examples)
+  # Y:    K × N matrix of true labels
+  
+  # true‐class index j_i
+  true_class <- max.col(t(Y))               # length N vector of 1…K
+  
+  # Extract the predicted probability 
+  idx       <- cbind(true_class, seq_len(ncol(Yhat)))
+  p_true    <- Yhat[idx]                    # length N vector
+ 
+   # cross‐entropy
+  -mean(log(p_true))
+}
+```
+
+## e) Render typed response
+
+Augmented Layer + Hidden Layer + Output Layer
+
+$= m(p+1) + m(p+m+1) + q(m+1)$
+
+$= m^2 + 2mp + mq + 2m + q$
+
+## f) Render code
+
+```{r}
+# Forward pass and loss for an (m,m)-AFnetwork with tanh activations and L2 regularization
+AFnetwork <- function(X, Y, m, nu, W1, b1, W2, b2, W3, b3) {
+  # X:    p × N matrix of inputs 
+  # Y:    q × N matrix of true labels
+  # m:    number of hidden units in each hidden layer
+  # nu:   regularization parameter (L2)
+  # W1:   m × p weight matrix for augmentation layer
+  # b1:   length‐m bias vector for augmentation layer
+  # W2:   m × (p + m) weight matrix for second hidden layer
+  # b2:   length‐m bias vector for second hidden layer
+  # W3:   q × m weight matrix for output layer
+  # b3:   length‐q bias vector for output layer
+  
+  p <- nrow(X); N <- ncol(X); q <- nrow(Y)
+  
+  # Augmentation layer: tanh(W1 X + b1)
+  Z1 <- W1 %*% X + matrix(b1, nrow = m, ncol = N)
+  A1 <- tanh(Z1)
+  
+  X_aug <- rbind(X, A1)    # (p + m) × N
+  
+  # Second/ hidden layer: tanh(W2 X_aug + b2)
+  Z2 <- W2 %*% X_aug + matrix(b2, nrow = m, ncol = N)
+  A2 <- tanh(Z2)
+  
+  Z3    <- W3 %*% A2 + matrix(b3, nrow = q, ncol = N)
+  Yhat  <- softmax_matrix(Z3)    # using function from 1(b)
+  
+  # Cross‑entropy loss 
+  true_class <- max.col(t(Y))             # length N
+  idx         <- cbind(true_class, 1:N)
+  p_true      <- Yhat[idx]                # length N
+  loss_ce     <- -mean(log(p_true))
+  
+  # L2 regularization on weights 
+  # biases not regularized
+  reg_penalty <- nu * ( sum(W1^2) + sum(W2^2) + sum(W3^2) )
+  
+  loss <- loss_ce + reg_penalty
+  
+  list(
+    Yhat      = Yhat,
+    loss      = loss,
+    loss_ce   = loss_ce,
+    reg       = reg_penalty
+  )
+}
+
+```
+
+## g) Render code + plot + in text response
+
+```{r}
+set.seed(2025)
+
+X_all      <- t(as.matrix(dat[, c("X1","X2","X3")]))        # p = 3 × N
+Y_labels <- max.col(dat[, c("Y1","Y2","Y3")])     # length N
+Y_all      <- t(diag(3)[Y_labels, ])                       # q = 3 × N
+
+# Split data
+N          <- ncol(X_all)
+train_idx  <- sample(N, size = floor(0.8 * N))
+val_idx    <- setdiff(seq_len(N), train_idx)
+X_train    <- X_all[, train_idx];  Y_train <- Y_all[, train_idx]
+X_val      <- X_all[, val_idx];    Y_val   <- Y_all[, val_idx]
+
+pack_params <- function(W1,b1,W2,b2,W3,b3) {
+  c(as.vector(W1), b1, as.vector(W2), b2, as.vector(W3), b3)
+}
+unpack_params <- function(params, p, m, q) {
+  idx <- 1
+  W1 <- matrix(params[idx:(idx + m*p - 1)],    nrow = m); idx <- idx + m*p
+  b1 <- params[idx:(idx + m - 1)];             idx <- idx + m
+  W2 <- matrix(params[idx:(idx + m*(p+m) - 1)],nrow = m); idx <- idx + m*(p+m)
+  b2 <- params[idx:(idx + m - 1)];             idx <- idx + m
+  W3 <- matrix(params[idx:(idx + q*m - 1)],    nrow = q); idx <- idx + q*m
+  b3 <- params[idx:(idx + q - 1)]
+  list(W1=W1,b1=b1,W2=W2,b2=b2,W3=W3,b3=b3)
+}
+
+obj_fn <- function(pars, X, Y, m, nu) {
+  p <- nrow(X); q <- nrow(Y)
+  pp <- unpack_params(pars, p, m, q)
+  res <- AFnetwork(X, Y, m, nu,
+                           pp$W1, pp$b1, pp$W2, pp$b2, pp$W3, pp$b3)
+  res$loss
+}
+
+p <- nrow(X_train); q <- nrow(Y_train); m <- 4
+init_pars <- pack_params(
+  W1 = matrix(rnorm(m*p, sd=0.1),   nrow = m),
+  b1 = rep(0, m),
+  W2 = matrix(rnorm(m*(p+m), sd=0.1), nrow = m),
+  b2 = rep(0, m),
+  W3 = matrix(rnorm(q*m, sd=0.1),   nrow = q),
+  b3 = rep(0, q)
+)
+
+n_val    <- 15
+nu_seq   <- exp(seq(-10, 2, length = n_val))
+val_errs <- numeric(n_val)
+
+for (i in seq_along(nu_seq)) {
+  nu <- nu_seq[i]
+  fit <- optim(
+    par     = init_pars,
+    fn      = obj_fn,
+    X       = X_train, Y = Y_train,
+    m       = m,       nu = nu,
+    method  = "BFGS",
+    control = list(maxit = 200)
+  )
+  val_errs[i] <- obj_fn(fit$par, X_val, Y_val, m, nu)
+}
+
+df_val <- data.frame(nu = nu_seq, val_error = val_errs)
+
+ggplot(df_val, aes(x = nu, y = val_error)) +
+  geom_line() + geom_point() +
+  scale_x_log10() +
+  theme_minimal() +
+  labs(
+    title = "Validation Loss vs Regularization (ν) for m = 4",
+    x     = expression(nu),
+    y     = "Validation Loss"
+  )
+best_i <- which.min(val_errs)
+nu_opt <- nu_seq[best_i]
+nu_opt
+```
+
+**Choice of ν.** Figure 2 shows that validation loss increases as ν grows, with the minimum validation loss (≈0.1) occurring at the smallest tested ν. Therefore, we select
+
+$$
+v = 0.0001
+$$
+
+as our regularization level.
+
+## h) Render code + plot
+
+```{r, warning=FALSE, message=FALSE}
+best_nu <- nu_opt            
+m <- 4
+p <- nrow(X_all)
+q <- nrow(Y_all)
+
+# initialize parameters (same as before)
+init_pars <- pack_params(
+  W1 = matrix(rnorm(m*p,   sd=0.1), nrow = m),
+  b1 = rep(0, m),
+  W2 = matrix(rnorm(m*(p+m), sd=0.1), nrow = m),
+  b2 = rep(0, m),
+  W3 = matrix(rnorm(q*m,   sd=0.1), nrow = q),
+  b3 = rep(0, q)
+)
+
+fit_final <- optim(
+  par     = init_pars,
+  fn      = obj_fn,
+  X       = X_all, Y = Y_all,
+  m       = m,     nu = best_nu,
+  method  = "BFGS",
+  control = list(maxit = 500)
+)
+params_final <- fit_final$par
+
+# prediction helper
+predict_AF <- function(X, pars) {
+  pp  <- unpack_params(pars, nrow(X), m, q)
+  out <- AFnetwork(X, matrix(0, q, ncol(X)),
+                           m, best_nu,
+                           pp$W1, pp$b1, pp$W2, pp$b2, pp$W3, pp$b3)
+  out$Yhat  # returns q × ncol(X) matrix of probs
+}
+
+# Response curve over X1 (hold X2 at its mean)
+x1_seq    <- seq(min(dat$X1), max(dat$X1), length = 200)
+x2_mean   <- mean(dat$X2)
+
+df1 <- expand.grid(
+  X1 = x1_seq,
+  X2 = x2_mean,
+  X3 = c(0,1)
+)
+X_pred1 <- t(as.matrix(df1[, c("X1","X2","X3")]))  # 3 × N1
+Yhat1    <- predict_AF(X_pred1, params_final)      # 3 × N1
+df1      <- cbind(df1, t(Yhat1))
+colnames(df1)[4:6] <- c("alpha","beta","rho")
+
+df1_long <- pivot_longer(df1, cols = c(alpha, beta, rho),
+                         names_to = "class", values_to = "prob")
+
+p1 <- ggplot(df1_long, aes(x = X1, y = prob, colour = factor(X3))) +
+  geom_line(size = 1) +
+  facet_wrap(~ class, ncol = 1) +
+  scale_colour_manual(values = c("0" = "purple", "1" = "lightblue"),
+                      name = "Detector\nType (X3)") +
+  theme_minimal() +
+  labs(
+    title = "Response Curves vs X1 by Detector Type",
+    x     = expression(X[1]),
+    y     = "Predicted Probability"
+  )
+
+# Response curve over X2 (hold X1 at its mean) 
+x2_seq  <- seq(min(dat$X2), max(dat$X2), length = 200)
+x1_mean <- mean(dat$X1)
+
+df2 <- expand.grid(
+  X1 = x1_mean,
+  X2 = x2_seq,
+  X3 = c(0,1)
+)
+X_pred2 <- t(as.matrix(df2[, c("X1","X2","X3")]))  # 3 × N2
+Yhat2    <- predict_AF(X_pred2, params_final)      # 3 × N2
+df2      <- cbind(df2, t(Yhat2))
+colnames(df2)[4:6] <- c("alpha","beta","rho")
+
+df2_long <- pivot_longer(df2, cols = c(alpha, beta, rho),
+                         names_to = "class", values_to = "prob")
+
+p2 <- ggplot(df2_long, aes(x = X2, y = prob, colour = factor(X3))) +
+  geom_line(size = 1) +
+  facet_wrap(~ class, ncol = 1) +
+  scale_colour_manual(values = c("0" = "purple", "1" = "lightblue"),
+                      name = "Detector\nType (X3)") +
+  theme_minimal() +
+  labs(
+    title = "Response Curves vs X2 by Detector Type",
+    x     = expression(X[2]),
+    y     = "Predicted Probability"
+  )
+
+print(p1)
+print(p2)
+
+```
+
+## i) In-text response
+
+An AFnetwork’s built‑in auto‐feature layer effectively automates non‑linear feature engineering. It learns transformed versions of the raw inputs therfore needing fewer hidden layers (and less manual tuning) than in a standard feed‑forward net. This can speed up convergence, improve sample efficiency, and even yield more interpretable intermediate features compared to manually crafted input expansions.
