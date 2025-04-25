@@ -168,7 +168,7 @@ AF_neural_net <- function(X, Y, theta, m, v){
 ```
 
 ## g) 
-```{r, fig.cap= "Validation Error vs Regularisation Parameter(v) of the neural network", fig.pos="H", warning=FALSE, out.height=="85%", fig.asp=1, fig.align='center', fig.margin=FALSE}
+```{r, fig.cap= "Validation Error vs Regularisation Parameter(v) of the neural network", fig.pos="H", warning=FALSE, fig.asp=1, fig.align='center', fig.margin=FALSE, fig.width=4.5, fig.height=4.5}
 set.seed(2025)
 
 X <-  as.matrix(dat[,1:3])
@@ -217,13 +217,7 @@ ggplot(plot_data, aes(x = v, y = ValidationError)) +
   geom_line(color = "blue") + geom_point(color = "blue") +
   geom_vline(xintercept = v_opt, linetype = "dotted", color = "red", size = 1) +
   labs(x = "v", y = "Validation Cross-Entropy Error", title = "") +
-  xlim(0, 2.5) + theme_minimal() + coord_fixed() + 
-  theme(
-    plot.margin = margin(0, 0, 0, 0, "pt"),  # Zero margin
-    plot.title = element_blank(),             # Remove title space
-    panel.border = element_blank(),          # Remove panel border
-    panel.grid = element_blank(),            # Optional: remove grid lines
-    axis.title = element_text(margin = margin(0, 0, 0, 0)))  # Tight axis titles
+  xlim(0, 2.5) + theme_minimal() + coord_fixed()
 ```
 
 We can see from the red dotted line, that the minimum validation cross
