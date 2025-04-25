@@ -1,38 +1,39 @@
 ---
-title: "Analytics A2"
-author: "Nesan Naidoo, Dominique Chetty"
-date: "`r Sys.Date()`"
 output:
   pdf_document: default
 editor_options:
   markdown:
     wrap: 72
+header-includes:
+  - \usepackage{float}
+  - \usepackage{graphicx}
 ---
 
 ```{r, echo=FALSE, include=FALSE}
+# title: "Analytics A2"
+# author: "Nesan Naidoo, Dominique Chetty"
+# date: "`r Sys.Date()`"
+
 dat =read.table("Collider_Data_2025.txt", h = TRUE,stringsAsFactors =TRUE)
 
 library(ggplot2)
 library(tidyr)
-
+library(gridExtra)
 ```
 
 # Question 1
-
 ## a)
-
-```{r, fig.cap="Scatter Plot of coordinates by Particle Type",fig.align='center'}
+```{r, fig.cap="Scatter Plot of coordinates by Particle Type",fig.align='center', fig.pos="H", out.width="70%", fig.asp=1}
 #create column for particle type based on Y1, Y2, Y3
 dat$Particle <- ifelse(dat$Y1 == 1, "alpha", ifelse(dat$Y2 == 1, "beta", "rho"))
-
 
 ggplot(data = dat, aes(x = X1, y = X2, color = Particle)) +
   geom_point(shape = 16, size = 3) +
   scale_color_manual(values = c("alpha" = "red", "beta" = "lightskyblue", "rho" = "green"),labels = c("alpha", "beta", "rho")) +  
   labs(x = "X1", y = "X2", title = "") +  
-  theme_minimal() +  
-  theme(legend.position = "right",axis.line = element_line(color = "black", linewidth = 1))  +
-  coord_fixed()  
+  theme_minimal() +  coord_fixed()  +
+  theme(legend.position = "right",axis.line = element_line(color = "black", linewidth = 1)) 
+   
 ```
 
 The rho particles (green) form a circular region around the origin. The
@@ -47,20 +48,16 @@ at learning non-linear decision boundaries and capturing complex
 patterns in the data.
 
 ## b)
-
 ```{r}
-
 soft_max <- function(Z) {
   exp_Z <- exp(Z)
   denom <- colSums(exp_Z)
   probs <- exp_Z / matrix(denom, nrow = nrow(Z), ncol = ncol(Z), byrow = TRUE)
   return(probs)
 }
-
 ```
 
 ## c)
-
 ```{r,eval=FALSE}
 cross_ent <- function(y, y_hat) {
   if (y[1] == 1) {
@@ -71,7 +68,6 @@ cross_ent <- function(y, y_hat) {
     return(-log(y_hat[3]))
   }
 }
-
 ```
 
 Since $y_i$ is one-hot encoded, the terms where $y_{ij} = 0$ contribute
@@ -80,23 +76,17 @@ only the terms corresponding to $y_{i.}=1$ as computing terms where
 $y_{i.}=0$ is computationally a waste of time and resources.
 
 ## d)
-
 ```{r}
 g <- function(Yhat, Y) {
   #Yhat: 3 x N matrix of predicted probabilities
   #Y: 3 x N matrix of one-hot encoded responses
-  
   log_Yhat <- -log(Yhat)
-  
   C_i <- colSums(Y * log_Yhat) 
-  
   return(mean(C_i))
 }
-
 ```
 
 ## e)
-
 For an ($m,m$)-AFnetwork with dim(x)=$p$ , dim(y) = $q$ ,
 
 -   Augmented features: original $p$ inputs are transformed into $p$
@@ -112,36 +102,22 @@ For an ($m,m$)-AFnetwork with dim(x)=$p$ , dim(y) = $q$ ,
 
 -   $q$ output nodes.
 
--   Augmentation Layer: transforms original $p$ inputs into $p$
-    augmented features.
+-   Augmentation Layer: $p^2$ Weights + $p$ Bias terms = $p^2 +p$ parameters.
 
-    -   $p^2$ Weights + $p$ Bias terms = $p^2 +p$ parameters.
+-   Input to First Hidden Layer: $2pm$ Weights+ $m$ Bias terms = $2pm +m$ parameters.
 
--   Input to First Hidden Layer:
+-   First to Second Hidden Layer: $m^2$ Weights + $m$ Bias Terms $= m^2 + m$ parameters.
 
-    -   $2pm$ Weights+ $m$ Bias terms = $2pm +m$ parameters.
-
--   First to Second Hidden Layer:
-
-    -   $m^2$ Weights + $m$ Bias Terms $= m^2 + m$ parameters.
-
--   Second Hidden to Output Layer:
-
-    -   $mq$ weights + $q$ biases $= mq+ q$ parameters.
-
--   Total parameters $= p^2+p+2pmm^2+2m +mq+q$.
+-   Second Hidden to Output Layer: $mq$ weights + $q$ biases $= mq+ q$ parameters.
 
 -   Total parameters $= p(p + 1+2m) +m (m +2 +q) +q$.
 
 ## f) 
-
 ```{r}
-
 # activation function for the augmented and hidden layers 
 act_fn <- function(Z){
   tanh(Z)
 }
-
 
 # X   - input matrix (N x p)
 # Y     - output matrix(N x q)
@@ -149,7 +125,6 @@ act_fn <- function(Z){
 # m    - Number of nodes on hidden layers
 # v     - regularisation parameter
 AF_neural_net <- function(X, Y, theta, m, v){
-  
   
    N = dim(X)[1]
    p = dim(X)[2]
@@ -189,18 +164,15 @@ AF_neural_net <- function(X, Y, theta, m, v){
    E2 = E1 + v/N * (sum(W1^2) + sum(W2^2) + sum(W3^2) + sum(W4^2))
    
    return(list(out = Yhat, E1 = E1, E2 = E2))
-  
 }
 ```
 
 ## g) 
-
-```{r, fig.cap= "Validation Error vs Regularisation Parameter(v) of the neural network"}
+```{r, fig.cap= "Validation Error vs Regularisation Parameter(v) of the neural network", fig.pos="H", warning=FALSE, out.height=="85%", fig.asp=1, fig.align='center', fig.margin=FALSE}
 set.seed(2025)
 
 X <-  as.matrix(dat[,1:3])
 Y <-  as.matrix(dat[,4:6])
-
 N <-  dim(X)[1]
 
 # splitting the data into 80-20 ratio for training and validation
@@ -210,7 +182,6 @@ Y_train <- Y[set,]
 X_val <- X[-set,]
 Y_val <- Y[-set,]
 
-
 p <- dim(X)[2]
 q <- dim(Y)[2]
 m <- 4
@@ -219,7 +190,6 @@ npars <- p*(p + 1 + 2*m) + m*(m + 2 + q) + q
 nv <- 20
 v_seq <-  exp(seq(-6,2,length.out = nv))
 valid_err <- rep(NA, nv)
-
 
 # validation
 for(i in 1:nv){
@@ -237,7 +207,6 @@ for(i in 1:nv){
   
   res_fit = AF_neural_net(X_val, Y_val, res_opt$estimate, m, 0)
   valid_err[i] <- res_fit$E1
-  
 }
 
 # selecting optimal v
@@ -245,26 +214,23 @@ v_opt <- v_seq[which.min(valid_err)]
 
 plot_data <- data.frame(v = v_seq, ValidationError = valid_err)
 ggplot(plot_data, aes(x = v, y = ValidationError)) +
-  geom_line(color = "blue") +
-  geom_point(color = "blue") +
+  geom_line(color = "blue") + geom_point(color = "blue") +
   geom_vline(xintercept = v_opt, linetype = "dotted", color = "red", size = 1) +
   labs(x = "v", y = "Validation Cross-Entropy Error", title = "") +
-  xlim(0, 2.5) +
-  theme_minimal() +
-  coord_fixed()
-
-
+  xlim(0, 2.5) + theme_minimal() + coord_fixed() + 
+  theme(
+    plot.margin = margin(0, 0, 0, 0, "pt"),  # Zero margin
+    plot.title = element_blank(),             # Remove title space
+    panel.border = element_blank(),          # Remove panel border
+    panel.grid = element_blank(),            # Optional: remove grid lines
+    axis.title = element_text(margin = margin(0, 0, 0, 0)))  # Tight axis titles
 ```
 
 We can see from the red dotted line, that the minimum validation cross
 entropy error occurs at the regularization level of `r round(v_opt, 3)`. Therefore we will choose this value as our regularization level. 
 
 ## h) 
-
-```{r,fig.subcap=c("Response curve : X3=0 ,X2=0,Vary X1","Response curve : X3=1 ,X2=0,Vary X1","Response curve : X3=0 ,X2=varied,X1=0","Response curve : X3=1 ,X2=varied,X1=0"),fig.cap="Response Curves for Particle Classification by Detector Type", fig.align='center'}
-
-
-
+```{r,fig.subcap=c("Response curve : X3=0 ,X2=0,Vary X1","Response curve : X3=1 ,X2=0,Vary X1","Response curve : X3=0 ,X2=varied,X1=0","Response curve : X3=1 ,X2=varied,X1=0"),fig.cap="Response Curves for Particle Classification by Detector Type", fig.align='center', fig.pos="H"}
 # Fit model with optimal v
 obj <- function(pars) {
   res <- AF_neural_net(X_train, Y_train, pars, m = 4, v = v_opt)
@@ -325,7 +291,6 @@ p1 <- ggplot(plot_data_long_A_X1, aes(x = X1, y = Probability, color = Class)) +
   theme_minimal() +
   theme(legend.position = "top", legend.title = element_blank(),plot.title = element_text(hjust = 0.5))+coord_fixed(ratio = 1)
 
-
 # Plot response curves for X1 (X3 = 1)
 p2 <- ggplot(plot_data_long_B_X1, aes(x = X1, y = Probability, color = Class)) +
   geom_line(linewidth = 1) +
@@ -333,7 +298,6 @@ p2 <- ggplot(plot_data_long_B_X1, aes(x = X1, y = Probability, color = Class)) +
   labs(x = "X1", y = "Class Probability", title = "X3 = 1") +
   theme_minimal() +
   theme(legend.position = "top", legend.title = element_blank(),plot.title = element_text(hjust = 0.5))+coord_fixed(ratio = 1)
-
 
 # Plot response curves for X2 (X3 = 0)
 p3 <- ggplot(plot_data_long_A_X2, aes(x = X2, y = Probability, color = Class)) +
@@ -343,7 +307,6 @@ p3 <- ggplot(plot_data_long_A_X2, aes(x = X2, y = Probability, color = Class)) +
   theme_minimal() +
   theme(legend.position = "top", legend.title = element_blank(),plot.title = element_text(hjust = 0.5))+coord_fixed(ratio = 1)
 
-
 # Plot response curves for X2 (X3 = 1)
 p4 <- ggplot(plot_data_long_B_X2, aes(x = X2, y = Probability, color = Class)) +
   geom_line(linewidth = 1) +
@@ -352,15 +315,11 @@ p4 <- ggplot(plot_data_long_B_X2, aes(x = X2, y = Probability, color = Class)) +
   theme_minimal() +
   theme(legend.position = "top", legend.title = element_blank(),plot.title = element_text(hjust = 0.5))+coord_fixed(ratio = 1)
 
-
 # Display all four plots
-library(gridExtra)
 grid.arrange(p1, p2, p3, p4, ncol = 2)
-
 ```
 
-## i)(Nesan)
-
+## i)
 AFnetworks introduce a dedicated hidden layer that learns nonlinear
 patterns of the input features (e.g. rho particles in circular regions and alpha and beta particles in concave shapes) before they are fed into the main
 network. These transformations act like automatic, learned features that
@@ -372,6 +331,6 @@ augmented inputs. This allows us to understand what features matter and
 how they matter. Hence, helps us understand how the network is reshaping
 the data before making predictions. For example if we needed to take a closer look at the results it produces, we could look at the value produced by the activation function of tanh in A1 for different observations. 
 
-The AFnetworks, augmentation layer performs feature engineering which reduces the need for large hidden layers to correctly classify observation. For example in our AFnetwork, we only needed 4 nodes in our hidden layers instead of needing more nodes/layers which could have become computationally expensive without our augmented layer. 
+The AFnetwork's, augmentation layer performs feature engineering which reduces the need for large hidden layers to correctly classify observations. For example in our AFnetwork, we only needed 4 nodes in our hidden layers instead of needing more nodes/layers which could have become computationally expensive without our augmented layer. 
 
 
