@@ -262,23 +262,23 @@ for (i in 1:100) {
 }
 
 # (X1 varying, X3 = 0)
-plot_data_A_X1 <- data.frame(X1 = xx, Alpha = Yhat_A_X1[,1], Beta = Yhat_A_X1[,2], Rho = Yhat_A_X1[,3])
-plot_data_long_A_X1 <- pivot_longer(plot_data_A_X1, cols = c("Alpha", "Beta", "Rho"), names_to = "Class", values_to = "Probability")
+data_A_X1 <- data.frame(X1 = xx, Alpha = Yhat_A_X1[,1], Beta = Yhat_A_X1[,2], Rho = Yhat_A_X1[,3])
+l.data_A_X1 <- pivot_longer(data_A_X1, cols = c("Alpha", "Beta", "Rho"), names_to = "Class", values_to = "Probability")
 
 # (X1 varying, X3 = 1)
-plot_data_B_X1 <- data.frame(X1 = xx, Alpha = Yhat_B_X1[,1], Beta = Yhat_B_X1[,2], Rho = Yhat_B_X1[,3])
-plot_data_long_B_X1 <- pivot_longer(plot_data_B_X1, cols = c("Alpha", "Beta", "Rho"), names_to = "Class", values_to = "Probability")
+data_B_X1 <- data.frame(X1 = xx, Alpha = Yhat_B_X1[,1], Beta = Yhat_B_X1[,2], Rho = Yhat_B_X1[,3])
+l.data_B_X1 <- pivot_longer(data_B_X1, cols = c("Alpha", "Beta", "Rho"), names_to = "Class", values_to = "Probability")
 
 # (X2 varying, X3 = 0)
-plot_data_A_X2 <- data.frame(X2 = xx, Alpha = Yhat_A_X2[,1], Beta = Yhat_A_X2[,2], Rho = Yhat_A_X2[,3])
-plot_data_long_A_X2 <- pivot_longer(plot_data_A_X2, cols = c("Alpha", "Beta", "Rho"), names_to = "Class", values_to = "Probability")
+data_A_X2 <- data.frame(X2 = xx, Alpha = Yhat_A_X2[,1], Beta = Yhat_A_X2[,2], Rho = Yhat_A_X2[,3])
+l.data_A_X2 <- pivot_longer(data_A_X2, cols = c("Alpha", "Beta", "Rho"), names_to = "Class", values_to = "Probability")
 
 # (X2 varying, X3 = 1)
-plot_data_B_X2 <- data.frame(X2 = xx, Alpha = Yhat_B_X2[,1], Beta = Yhat_B_X2[,2], Rho = Yhat_B_X2[,3])
-plot_data_long_B_X2 <- pivot_longer(plot_data_B_X2, cols = c("Alpha", "Beta", "Rho"), names_to = "Class", values_to = "Probability")
+data_B_X2 <- data.frame(X2 = xx, Alpha = Yhat_B_X2[,1], Beta = Yhat_B_X2[,2], Rho = Yhat_B_X2[,3])
+l.data_B_X2 <- pivot_longer(data_B_X2, cols = c("Alpha", "Beta", "Rho"), names_to = "Class", values_to = "Probability")
 
 # response curves for X1 (X3 = 0)
-p1 <- ggplot(plot_data_long_A_X1, aes(x = X1, y = Probability, color = Class)) +
+p1 <- ggplot(l.data_A_X1, aes(x = X1, y = Probability, color = Class)) +
   geom_line(linewidth = 1) +
   scale_color_manual(values = c("Alpha" = "red", "Beta" = "lightskyblue", "Rho" = "green")) +
   labs(x = "X1", y = "Class Probability", title = "X3 = 0") +
@@ -286,7 +286,7 @@ p1 <- ggplot(plot_data_long_A_X1, aes(x = X1, y = Probability, color = Class)) +
   theme(legend.position = "top", legend.title = element_blank(),plot.title = element_text(hjust = 0.5))+coord_fixed(ratio = 1)
 
 # Plot response curves for X1 (X3 = 1)
-p2 <- ggplot(plot_data_long_B_X1, aes(x = X1, y = Probability, color = Class)) +
+p2 <- ggplot(l.data_B_X1, aes(x = X1, y = Probability, color = Class)) +
   geom_line(linewidth = 1) +
   scale_color_manual(values = c("Alpha" = "red", "Beta" = "lightskyblue", "Rho" = "green")) +
   labs(x = "X1", y = "Class Probability", title = "X3 = 1") +
@@ -294,7 +294,7 @@ p2 <- ggplot(plot_data_long_B_X1, aes(x = X1, y = Probability, color = Class)) +
   theme(legend.position = "top", legend.title = element_blank(),plot.title = element_text(hjust = 0.5))+coord_fixed(ratio = 1)
 
 # Plot response curves for X2 (X3 = 0)
-p3 <- ggplot(plot_data_long_A_X2, aes(x = X2, y = Probability, color = Class)) +
+p3 <- ggplot(l.data_A_X2, aes(x = X2, y = Probability, color = Class)) +
   geom_line(linewidth = 1) +
   scale_color_manual(values = c("Alpha" = "red", "Beta" = "lightskyblue", "Rho" = "green")) +
   labs(x = "X2", y = "Class Probability", title = "X3 = 0") +
@@ -302,14 +302,14 @@ p3 <- ggplot(plot_data_long_A_X2, aes(x = X2, y = Probability, color = Class)) +
   theme(legend.position = "top", legend.title = element_blank(),plot.title = element_text(hjust = 0.5))+coord_fixed(ratio = 1)
 
 # Plot response curves for X2 (X3 = 1)
-p4 <- ggplot(plot_data_long_B_X2, aes(x = X2, y = Probability, color = Class)) +
+p4 <- ggplot(l.data_B_X2, aes(x = X2, y = Probability, color = Class)) +
   geom_line(linewidth = 1) +
   scale_color_manual(values = c("Alpha" = "red", "Beta" = "lightskyblue", "Rho" = "green")) +
   labs(x = "X2", y = "Class Probability", title = "X3 = 1") +
   theme_minimal() +
   theme(legend.position = "top", legend.title = element_blank(),plot.title = element_text(hjust = 0.5))+coord_fixed(ratio = 1)
 
-# Display all four plots
+
 grid.arrange(p1, p2, p3, p4, ncol = 2)
 ```
 
