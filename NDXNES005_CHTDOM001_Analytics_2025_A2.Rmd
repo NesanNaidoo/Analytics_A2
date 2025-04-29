@@ -1,6 +1,4 @@
 ---
-title: "Analytics A2"
-author: "Nesan Naidoo, Dominique Chetty"
 output:
   pdf_document: default
 editor_options:
@@ -223,7 +221,7 @@ ggplot(plot_data, aes(x = v, y = ValidationError)) +
 ```
 
 We can see from the red dotted line, that the minimum validation cross
-entropy error occurs at the regularization level of `r round(v_opt, 3)`. Therefore we will choose this value as our regularization level. 
+entropy error occurs at the regularization level of `r round(v_opt, 3)`, after which the validation error steadily increases. Therefore we will choose `r round(v_opt, 3)` as our regularization level. 
 
 ## h) 
 ```{r,fig.subcap=c("Response curve : X3=0 ,X2=0,Vary X1","Response curve : X3=1 ,X2=0,Vary X1","Response curve : X3=0 ,X2=varied,X1=0","Response curve : X3=1 ,X2=varied,X1=0"),fig.cap="Response Curves for Particle Classification by Detector Type", fig.align='center', fig.pos="H"}
