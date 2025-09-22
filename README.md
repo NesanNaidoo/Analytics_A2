@@ -1,14 +1,12 @@
 
 
-```markdown
+
 # Analytics_A2
 
 ## Overview
 
 **Analytics_A2** is a data analysis / statistical project using R / Quarto.  
 The aim of this project is to [describe your project’s goals: e.g. “explore trends in collider data”, “evaluate performance metrics”, “generate insights from survey results”, etc.].
-
----
 
 ## Features
 
@@ -18,7 +16,7 @@ The aim of this project is to [describe your project’s goals: e.g. “explore 
 - Report generation as HTML / PDF  
 - Versioned outputs and reproducible workflow
 
----
+
 
 ## Repository Structure
 
@@ -36,7 +34,7 @@ Analytics\_A2/
 
 ````
 
----
+
 
 ## Getting Started / Reproducing the Analysis
 
